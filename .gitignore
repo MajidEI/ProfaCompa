@@ -17,7 +17,7 @@ build/
 .env.local
 .env.*.local
 !.env.example
-!.env.production
+backend/.env
 
 # IDE and editor files
 .idea/

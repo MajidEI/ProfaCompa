@@ -1,105 +1,81 @@
-# Deployment Guide
+# Deployment Guide - Vercel
 
-This guide walks you through deploying the Salesforce Profile Compare tool to production.
+This guide walks you through deploying the Salesforce Profile Compare tool to Vercel.
 
-## Architecture Overview
+## Architecture
 
 ```
-┌─────────────────┐     HTTPS      ┌─────────────────┐     Salesforce API
-│                 │ ◄────────────► │                 │ ◄─────────────────►
-│     Vercel      │                │  Render/Railway │                    
-│   (Frontend)    │                │    (Backend)    │                    
-│                 │                │                 │                    
-└─────────────────┘                └─────────────────┘                    
-    React + Vite                     Express + Node.js
+┌─────────────────────────────────────────────┐
+│                  Vercel                      │
+│                                             │
+│  ┌─────────────┐     ┌──────────────────┐  │
+│  │   Frontend  │     │  API (Serverless) │  │
+│  │  React/Vite │ ──► │   /api/*          │  │
+│  │     /       │     │                   │  │
+│  └─────────────┘     └──────────────────┘  │
+│                              │              │
+└──────────────────────────────┼──────────────┘
+                               │
+                               ▼
+                    ┌──────────────────┐
+                    │  Salesforce API  │
+                    └──────────────────┘
 ```
+
+Everything runs on Vercel:
+- **Frontend**: React + Vite (static files)
+- **API**: Serverless functions at `/api/*`
+
+---
 
 ## Prerequisites
 
-- [Node.js 18+](https://nodejs.org/) installed locally
-- [Git](https://git-scm.com/) installed
 - A [Vercel account](https://vercel.com) (free tier available)
-- A [Render account](https://render.com) (free tier available) or [Railway account](https://railway.app)
+- A [GitHub account](https://github.com) with your code pushed
 - Your Salesforce Connected App credentials
 
 ---
 
-## Step 1: Push Code to GitHub
+## Step 1: Update Salesforce Connected App
 
-1. Create a new repository on GitHub
+Before deploying, update your Salesforce Connected App callback URL:
 
-2. Push your code:
-```bash
-git add .
-git commit -m "Initial commit - Salesforce Profile Compare"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
-
----
-
-## Step 2: Deploy Backend to Render
-
-### 2.1 Create a New Web Service
-
-1. Go to [render.com](https://render.com) and sign in
-2. Click **"New +"** → **"Web Service"**
-3. Connect your GitHub repository
-4. Configure the service:
-
-| Setting | Value |
-|---------|-------|
-| **Name** | `salesforce-profile-compare-api` |
-| **Root Directory** | `backend` |
-| **Environment** | `Node` |
-| **Build Command** | `npm install && npm run build` |
-| **Start Command** | `npm start` |
-| **Instance Type** | Free (or your preference) |
-
-### 2.2 Add Environment Variables
-
-In Render dashboard, go to **Environment** and add:
-
-| Variable | Value |
-|----------|-------|
-| `SF_CLIENT_ID` | Your Salesforce Connected App Consumer Key |
-| `SF_CLIENT_SECRET` | Your Salesforce Connected App Consumer Secret |
-| `SF_CALLBACK_URL` | `https://YOUR-APP.onrender.com/auth/callback` |
-| `SESSION_SECRET` | Generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `FRONTEND_URL` | `https://YOUR-APP.vercel.app` (update after Vercel deploy) |
-| `NODE_ENV` | `production` |
-| `SF_LOGIN_URL` | `https://login.salesforce.com` (or `https://test.salesforce.com` for sandbox) |
-
-### 2.3 Deploy
-
-Click **"Create Web Service"** and wait for the deployment to complete.
-
-**Note your backend URL**: `https://YOUR-APP.onrender.com`
+1. Go to **Salesforce Setup** → **App Manager**
+2. Find your Connected App → **Edit**
+3. Update the **Callback URL** to:
+   ```
+   https://YOUR-APP-NAME.vercel.app/api/auth/callback
+   ```
+   (You'll get the exact URL after deploying - you can update this later)
 
 ---
 
-## Step 3: Deploy Frontend to Vercel
+## Step 2: Deploy to Vercel
 
-### Option A: Using Vercel Dashboard
+### Option A: Using Vercel Dashboard (Recommended)
 
 1. Go to [vercel.com](https://vercel.com) and sign in
 2. Click **"Add New..."** → **"Project"**
-3. Import your GitHub repository
+3. Import your GitHub repository (**ProfaCompa**)
 4. Configure the project:
 
 | Setting | Value |
 |---------|-------|
-| **Root Directory** | `frontend` |
-| **Framework Preset** | Vite |
-| **Build Command** | `npm run build` |
-| **Output Directory** | `dist` |
+| **Framework Preset** | Other |
+| **Root Directory** | `.` (leave as root) |
+| **Build Command** | `cd frontend && npm install && npm run build` |
+| **Output Directory** | `frontend/dist` |
+| **Install Command** | `npm install` |
 
-5. Add Environment Variable:
+5. **Add Environment Variables** (click "Environment Variables"):
 
-| Variable | Value |
-|----------|-------|
-| `VITE_API_URL` | `https://YOUR-APP.onrender.com` (your backend URL) |
+| Name | Value |
+|------|-------|
+| `SF_CLIENT_ID` | Your Salesforce Consumer Key |
+| `SF_CLIENT_SECRET` | Your Salesforce Consumer Secret |
+| `SF_CALLBACK_URL` | `https://YOUR-APP.vercel.app/api/auth/callback` |
+| `JWT_SECRET` | Generate a random string (use: `openssl rand -hex 32`) |
+| `SF_LOGIN_URL` | `https://login.salesforce.com` (or `https://test.salesforce.com` for sandbox) |
 
 6. Click **"Deploy"**
 
@@ -109,63 +85,41 @@ Click **"Create Web Service"** and wait for the deployment to complete.
 # Install Vercel CLI
 npm install -g vercel
 
-# Navigate to frontend
-cd frontend
+# Login to Vercel
+vercel login
 
-# Deploy
+# Deploy (from project root)
 vercel
 
-# Follow the prompts:
-# - Link to existing project? No
-# - Project name: salesforce-profile-compare
-# - Directory: ./
-# - Override settings? No
-```
+# Follow prompts, then add environment variables:
+vercel env add SF_CLIENT_ID
+vercel env add SF_CLIENT_SECRET
+vercel env add SF_CALLBACK_URL
+vercel env add JWT_SECRET
+vercel env add SF_LOGIN_URL
 
-After first deploy, set environment variable:
-```bash
-vercel env add VITE_API_URL
-# Enter: https://YOUR-APP.onrender.com
-# Select: Production, Preview, Development
-```
-
-Then redeploy:
-```bash
+# Redeploy with environment variables
 vercel --prod
 ```
 
 ---
 
-## Step 4: Update Salesforce Connected App
+## Step 3: Update Salesforce Callback URL
 
-1. Go to **Salesforce Setup** → **App Manager**
-2. Find your Connected App and click **Edit**
-3. Update the **Callback URL**:
-   ```
-   https://YOUR-APP.onrender.com/auth/callback
-   ```
-4. Save the changes
+After deployment, get your Vercel URL (e.g., `profacompa.vercel.app`) and:
 
-**Note:** Changes may take 2-10 minutes to propagate.
+1. Update the `SF_CALLBACK_URL` environment variable in Vercel:
+   ```
+   https://profacompa.vercel.app/api/auth/callback
+   ```
+
+2. Update your Salesforce Connected App callback URL to match.
+
+3. Redeploy or wait for the next deployment.
 
 ---
 
-## Step 5: Update Backend CORS
-
-Go back to Render and update the `FRONTEND_URL` environment variable with your actual Vercel URL:
-
-```
-FRONTEND_URL=https://your-app.vercel.app
-```
-
-If you have a custom domain, add it comma-separated:
-```
-FRONTEND_URL=https://your-app.vercel.app,https://custom-domain.com
-```
-
----
-
-## Step 6: Verify Deployment
+## Step 4: Verify Deployment
 
 1. Open your Vercel URL in a browser
 2. Click "Login to Salesforce"
@@ -174,82 +128,88 @@ FRONTEND_URL=https://your-app.vercel.app,https://custom-domain.com
 
 ---
 
+## Environment Variables Reference
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `SF_CLIENT_ID` | Yes | Salesforce Connected App Consumer Key | `3MVG9...` |
+| `SF_CLIENT_SECRET` | Yes | Salesforce Connected App Consumer Secret | `1234567890...` |
+| `SF_CALLBACK_URL` | Yes | OAuth callback URL | `https://app.vercel.app/api/auth/callback` |
+| `JWT_SECRET` | Yes | Secret for JWT session tokens (32+ chars) | `a1b2c3d4...` |
+| `SF_LOGIN_URL` | No | Salesforce login URL (default: production) | `https://login.salesforce.com` |
+
+---
+
 ## Troubleshooting
-
-### "CORS Error" in browser console
-
-- Verify `FRONTEND_URL` in backend includes your Vercel domain
-- Check that credentials are being sent (should be automatic)
-
-### "Session not found" or logout issues
-
-- Ensure `NODE_ENV=production` is set in backend
-- Verify cookie settings allow cross-origin cookies
-- Check browser third-party cookie settings
 
 ### "Invalid redirect_uri" from Salesforce
 
-- Verify `SF_CALLBACK_URL` matches exactly what's in Connected App
-- URL must include protocol (`https://`)
+- The `SF_CALLBACK_URL` must **exactly match** what's in your Connected App
+- Include the protocol (`https://`)
 - No trailing slash
+- Must be `/api/auth/callback`
 
-### Backend taking long to respond
+### "CORS Error" in browser console
 
-- Free tier Render services spin down after inactivity
-- First request may take 30-60 seconds to wake up
-- Consider upgrading to paid tier for always-on
+- This shouldn't happen with the Vercel deployment since everything is on the same domain
+- Clear your browser cookies and try again
+
+### "Session not found" / Keeps logging out
+
+- Ensure `JWT_SECRET` is set and consistent across deployments
+- Check that cookies are being set (look in browser DevTools → Application → Cookies)
+
+### OAuth flow redirects to wrong URL
+
+- Check `SF_CALLBACK_URL` environment variable
+- Ensure your Salesforce Connected App callback matches
+
+### API returning 500 errors
+
+- Check Vercel Functions logs: Project → Functions → View logs
+- Verify all environment variables are set correctly
 
 ---
 
 ## Custom Domain (Optional)
 
-### Vercel (Frontend)
-
 1. Go to Vercel Project → **Settings** → **Domains**
 2. Add your custom domain
 3. Update DNS records as instructed
-
-### Render (Backend)
-
-1. Go to Render Service → **Settings** → **Custom Domain**
-2. Add your custom domain
-3. Update DNS records as instructed
-4. Update `SF_CALLBACK_URL` and Salesforce Connected App
+4. Update `SF_CALLBACK_URL` to use your custom domain
+5. Update Salesforce Connected App callback URL
 
 ---
 
-## Environment Variables Summary
+## Local Development
 
-### Backend (Render)
+To run locally with the Vercel structure:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SF_CLIENT_ID` | Salesforce Consumer Key | `3MVG9...` |
-| `SF_CLIENT_SECRET` | Salesforce Consumer Secret | `1234567890...` |
-| `SF_CALLBACK_URL` | OAuth callback URL | `https://api.example.com/auth/callback` |
-| `SESSION_SECRET` | Session encryption key | `a1b2c3d4e5...` (64 chars) |
-| `FRONTEND_URL` | Allowed CORS origins | `https://app.example.com` |
-| `NODE_ENV` | Environment mode | `production` |
-| `SF_LOGIN_URL` | Salesforce login endpoint | `https://login.salesforce.com` |
+```bash
+# Install dependencies
+npm install
+cd frontend && npm install && cd ..
 
-### Frontend (Vercel)
+# Start the old backend for local dev
+cd backend && npm run dev
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `https://api.example.com` |
+# In another terminal, start frontend
+cd frontend && npm run dev
+```
+
+Or use Vercel CLI for local serverless functions:
+
+```bash
+vercel dev
+```
 
 ---
 
 ## Costs
 
-### Free Tier Limitations
+**Vercel Free Tier includes:**
+- 100 GB bandwidth/month
+- 100 GB-Hours serverless function execution
+- Unlimited deployments
 
-| Service | Limit | Notes |
-|---------|-------|-------|
-| **Vercel** | 100GB bandwidth/month | Sufficient for most use cases |
-| **Render** | 750 hours/month, spins down | May have cold start delays |
-
-### Recommended for Production
-
-- **Vercel Pro**: $20/month for team features
-- **Render Starter**: $7/month for always-on service
+This is more than sufficient for typical usage of this tool.

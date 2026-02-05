@@ -3,12 +3,10 @@ import type { AuthStatus, Profile, CompareResponse } from '../types';
 
 /**
  * API base URL
- * In development, Vite proxy handles /api -> http://localhost:3001
- * In production, configure this to point to your backend
+ * In production (Vercel), API routes are at /api/*
+ * In development, we also use /api/* with Vite proxy
  */
-const API_BASE_URL = import.meta.env.PROD 
-  ? import.meta.env.VITE_API_URL || ''
-  : 'http://localhost:3001';
+const API_BASE_URL = '/api';
 
 /**
  * Axios instance configured for our API
@@ -48,7 +46,8 @@ api.interceptors.response.use(
  * @param env - 'production' or 'sandbox'
  */
 export function getLoginUrl(env: 'production' | 'sandbox' = 'production'): string {
-  return `${API_BASE_URL}/auth/login?env=${env}`;
+  // Use absolute path since we're redirecting the browser
+  return `/api/auth/login?env=${env}`;
 }
 
 /**

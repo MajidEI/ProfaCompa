@@ -1,0 +1,22 @@
+{
+  "name": "profacompa",
+  "version": "1.0.0",
+  "description": "Salesforce Profile Comparison Tool",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "build": "cd frontend && npm run build",
+    "vercel-build": "cd frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.4",
+    "@vercel/node": "^3.0.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}
